@@ -1,0 +1,239 @@
+---
+title: 'Tutorial for Regression Analysis, House Price Prediction, Jan 2022'
+output: html_notebook
+---
+
+Environment and Library setup
+
+```{r}
+# set working directory
+setwd("~/DataSpellProjects/CISC351code")
+install.packages("visdat")
+install.packages("naniar")
+install.packages("ggplot2")
+install.packages("e1071")
+install.packages("corrplot")
+install.packages("tidyverse")
+install.packages("ggpubr")
+install.packages("MASS")
+
+
+library(dplyr)
+library(ggplot2)
+library(naniar)
+library(visdat)
+library(e1071)
+library(corrplot)
+library(tidyverse)
+library(ggpubr)
+library(MASS)
+
+
+
+
+```
+
+Part 1: Data Exploration
+
+```{r}
+data <- read.csv("data/houseprice.csv")
+head(data)
+str(data)
+
+# check missing data
+miss_var_summary(data)
+miss_case_summary(data)
+vis_dat(data)
+
+#split train and test
+data$Id <- 1:nrow(data)
+train <- data %>% dplyr::sample_frac(.8)
+test  <- dplyr::anti_join(data, train, by = 'Id')
+```
+
+Now Let's take a look at the response variable, SalePrice
+
+```{r}
+#disable scientific notation
+options(scipen = 999)
+
+fivenum(train$SalePrice)
+summary(train$SalePrice)
+boxplot(train$SalePrice, col = "blue")
+ggplot(train, aes(x = SalePrice)) + geom_histogram()
+rug(train$SalePrice)
+
+#more advanced plot
+ggplot(train, aes(x = SalePrice)) +
+        geom_histogram(aes(fill = ..count..), binwidth = 50000) +
+        scale_x_continuous(
+                breaks = seq(0, 1000000, 100000),
+                limits = c(0, 1000000),
+                labels = function(x)
+                        sprintf("%g", x)
+        ) +
+        scale_y_continuous(name = "Count") +
+        ggtitle("Frequency histogram of house price")
+
+skewness(train$SalePrice)
+#check if normally distributed
+qqnorm(train$SalePrice)
+qqline(train$SalePrice)
+
+
+#log-transform of SalePrice
+train$logSalePrice = log(train$SalePrice)
+ggplot(train, aes(x = logSalePrice)) + geom_histogram()
+qqnorm(train$logSalePrice)
+qqline(train$logSalePrice)
+skewness(train$logSalePrice)
+```
+
+Now Let's check variable: MSSubClass
+Can this variable used to predict house price?
+
+```{r}
+boxplot(SalePrice ~ MSSubClass, data = train)
+```
+
+Can we sort them based on median and compare with overall?
+
+```{r}
+p <- ggplot(train, aes(reorder(as.character(MSSubClass),SalePrice), SalePrice))
+p + geom_boxplot()
+
+
+train %>%
+  mutate(Group = "all") %>%
+  ggplot() +
+  geom_boxplot( aes(as.character(train$MSSubClass), SalePrice)) +
+        geom_boxplot(aes(Group, SalePrice))
+```
+
+What are the other obvious predictor candidates?
+How about neiborhood?
+
+```{r}
+train %>%
+        mutate(Group = "all") %>%
+        ggplot() +
+        geom_boxplot( aes(train$Neighborhood, SalePrice)) +
+        geom_boxplot(aes(Group, SalePrice)) +
+        scale_x_discrete(guide = guide_axis(angle = 40))
+```
+
+Seems too many neighborhoods, some are extreme high-end.
+Maybe we can replace it with other variables? like quality metrics? and use that to represent the location's average quality?
+
+OverallQual
+OverallCond
+ExterQual
+ExterCond
+Functional
+
+```{r}
+# Specify that they are ordinal variables with the given levels
+mapping <- c("Ex" = 10, "Gd" = 8, "TA" = 6, "Fa" = 4, "Po" = 2)
+train$ExterQual.score <- mapping[train$ExterQual]
+train$ExterCond.score <- mapping[train$ExterCond]
+
+fun_mapping <- c("Typ" = 10, "Min1" = 9, "Min2" = 8, "Mod" = 7, "Maj1" = 4,"Maj2" = 3,"Sev" = 2,"Sal" = 1)
+train$Functional.score <- fun_mapping[train$Functional]
+
+#introduce a new value showing the overall quality of the house
+train<-mutate(train %>% rowwise(),
+       QualityScore_mean = rowMeans(cbind(OverallQual,OverallCond,ExterQual.score,ExterCond.score,Functional.score)))
+
+
+
+#quality score for each neighbourhood
+aggregate(train$QualityScore_mean, list(train$Neighborhood), FUN=mean)
+
+#order align with hourse price order
+p <- ggplot(train, aes(reorder(Neighborhood,SalePrice), SalePrice))
+p + geom_boxplot()
+
+#add neighbourhood quality score for each data point
+mapping <- c("NridgHt"= 7.56, "StoneBr"= 7.467, "NoRidge" =7.44 ,"Veenker"= 7.4 ,"Somerst"= 7.28,"Blmngtn"= 7.25, "Blueste" =7.2, "Timber" =7.15 ,"CollgCr" =7.08, "Crawfor" =7, "Gilbert"=6.98, "NWAmes" =6.95 ,"SawyerW" =6.88 ,"OldTown" =6.79 ,"ClearCr" =6.76, "Mitchel" =6.712 ,"NPkVill" =6.67, "BrDale" =6.63 ,"NAmes"= 6.629 ,"Sawyer" =6.59, "Edwards" =6.51, "SWISU" =6.48 ,"MeadowV" =6.46, "BrkSide" =6.46, "IDOTRR"= 6.22)
+train$Neighborhood_Qualityscore <- mapping[train$Neighborhood]
+```
+
+How about living area? How to test the correlation between living area and saleprice or logsaleprice?
+
+```{r}
+# scatterplot
+ggplot(train) +
+        aes(x = GrLivArea, y = logSalePrice) +
+        geom_point(colour = "#0c4c8a") +
+        theme_minimal()
+
+# Pearson correlation between 2 variables
+cor(train$GrLivArea, train$SalePrice)
+cor(train$GrLivArea, train$logSalePrice)
+
+#more advanced, correlation and scatter together
+ggscatter(train, x = "GrLivArea", y = "logSalePrice",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Ground Living Area", ylab = "log House Price")
+
+
+```
+
+The first a multiple linear regression model
+formula = logSalePrice ~ OverallQual + QualityScore_mean + Neighborhood_Qualityscore + GrLivArea + FullBath + TotRmsAbvGrd + GarageCars
+
+What should we do if we want to directly train the above model?
+
+```{r}
+model_v1 <- lm(formula = logSalePrice ~ OverallQual +  QualityScore_mean + Neighborhood_Qualityscore+ GrLivArea + FullBath + TotRmsAbvGrd + GarageCars, data = train)
+
+summary(model_v1)
+
+#seems that FullBath and TotRmsAbvGrd does not contribute much, what if we remove them?
+model_v2 <- lm(formula = logSalePrice ~ OverallQual +  QualityScore_mean + Neighborhood_Qualityscore+ GrLivArea  + GarageCars, data = train)
+
+summary(model_v2)
+
+#can we show the predictive power of the model_v2?
+#first, we need to perform the same transform
+test$logSalePrice = log(test$SalePrice)
+
+mapping <- c("Ex" = 10, "Gd" = 8, "TA" = 6, "Fa" = 4, "Po" = 2)
+test$ExterQual.score <- mapping[test$ExterQual]
+test$ExterCond.score <- mapping[test$ExterCond]
+
+fun_mapping <- c("Typ" = 10, "Min1" = 9, "Min2" = 8, "Mod" = 7, "Maj1" = 4,"Maj2" = 3,"Sev" = 2,"Sal" = 1)
+test$Functional.score <- fun_mapping[test$Functional]
+test<-mutate(test %>% rowwise(),
+             QualityScore_mean = rowMeans(cbind(OverallQual,OverallCond,ExterQual.score,ExterCond.score,Functional.score)))
+
+#add neighbourhood quality score for each data point
+mapping <- c("NridgHt"= 7.56, "StoneBr"= 7.467, "NoRidge" =7.44 ,"Veenker"= 7.4 ,"Somerst"= 7.28,"Blmngtn"= 7.25, "Blueste" =7.2, "Timber" =7.15 ,"CollgCr" =7.08, "Crawfor" =7, "Gilbert"=6.98, "NWAmes" =6.95 ,"SawyerW" =6.88 ,"OldTown" =6.79 ,"ClearCr" =6.76, "Mitchel" =6.712 ,"NPkVill" =6.67, "BrDale" =6.63 ,"NAmes"= 6.629 ,"Sawyer" =6.59, "Edwards" =6.51, "SWISU" =6.48 ,"MeadowV" =6.46, "BrkSide" =6.46, "IDOTRR"= 6.22)
+test$Neighborhood_Qualityscore <- mapping[test$Neighborhood]
+
+p <- predict(model_v2, newdata = test)
+predict_logback <- expm1(p)
+error <- test$SalePrice - predict_logback
+RMSE_v2 <- sqrt(mean(error^2))
+
+p <- predict(model_v1, newdata = test)
+predict_logback <- expm1(p)
+error <- test$SalePrice - predict_logback
+RMSE_v1 <- sqrt(mean(error^2))
+
+```
+
+However, we haven't check the Assumptions and Multicollinearity.
+
+```{r}
+# check the diagnostic plot for model v2.
+par(mfrow=c(2,2))
+plot(model_v2)
+
+# check the multicolinearity
+selected_features <- train[,c( "OverallQual","QualityScore_mean","Neighborhood_Qualityscore","GrLivArea","GarageCars")]
+res <- cor(selected_features)
+correlation_matx<-round(res, 2)
+
+```

@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pandas = "*"
+numpy = "*"
+scipy = "*"
+matplotlib = "*"
+seaborn = "*"
+statsmodels = "*"
+openpyxl = "*"
+scikit-learn = "*"
+missingno = "*"
+
+[dev-packages]
+ipykernel = "*"
+jupytext = "*"
+pydocstyle = "*"
+bandit = "*"
+flake8 = "*"
+mypy = "*"
+pylint = "*"
+black = "*"
+
+[requires]
+python_version = "3.10"
+
+[pipenv]
+allow_prereleases = true
