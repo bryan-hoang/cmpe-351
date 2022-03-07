@@ -1,0 +1,122 @@
+\documentclass[
+  coursecode={CMPE 351},
+  assignmentname={Paper Review},
+  studentnumber=20053722,
+  name={Bryan Hoang (16bch1)},
+  draft,
+  final,
+]{
+  ltxanswer%
+}
+
+\usepackage{bch-style}
+
+\RequirePackage[
+  backend=biber,
+  style=ieee,
+  sorting=none,
+  doi=false,
+  isbn=false,
+  url=true,
+  urldate=long,
+]{biblatex}
+
+\DefineBibliographyStrings{english}{urlseen = {Last accessed:},}
+
+% To remove (). at the beginning of references with no date.
+\RequirePackage{xpatch}
+\xpatchbibdriver{online}
+{\printtext[parens]{\usebibmacro{date}}}
+{\iffieldundef{year}{}{\printtext[parens]{\usebibmacro{date}}}}
+{}{}
+
+\DefineBibliographyStrings{english}{url = [Online]\adddot\addspace Available at,}
+\DeclareFieldFormat{urldate}{\bibstring{urlseen}\space#1}
+
+\providecommand{\main}{.}
+
+\makeatletter
+\newrobustcmd*{\nobibliography}{%
+    \@ifnextchar[%]
+    {\blx@nobibliography}
+    {\blx@nobibliography[]}}
+\def\blx@nobibliography[#1]{}
+\appto{\skip@preamble}{\let\printbibliography\nobibliography}
+\makeatother
+
+% Silences a warning about references wrapping.
+\RequirePackage[final]{microtype}
+
+\addbibresource{./bibliography.bib}
+
+\begin{document}
+  \section*{Predicting Value and Ranking Social Volatility of Cryptocurrency via Twitter (Group 1)}
+
+  \section*{Paper title: Does Twitter predict Bitcoin?}
+
+  \section*{Published venue and year: Economics Letters, 2019}
+
+  \begin{questions}
+    \question{} How do you guarantee the quality of the paper?
+    \begin{parts}
+      \part{} What's the citation of this paper?
+      \begin{solution}
+        D. Shen, A. Urquhart, and P. Wang, ``Does twitter predict Bitcoin?,'' Economics Letters, vol. 174, pp. 118--122, Jan. 2019, doi: 10.1016/j.econlet.2018.11.007.~\cite{shen_does_2019}
+      \end{solution}
+
+      \part{} Is the paper published recently?
+      \begin{solution}
+        With the paper being published a little over three years ago where twitter and cryptocurrencies each haven't drastically changed, I would say that the paper has been published recently.
+      \end{solution}
+
+      \part{} Is the paper published a good venue in the domain?
+      \begin{solution}
+        Economics Letters is a scholarly peer-reviewed journal of economics that publishes concise communications that provide a means of rapid and efficient dissemination of new results, models, and methods in all fields of economic research~\cite{noauthor_editorial_nodate}. Research into the economics of cryptocurrencies is a domain that would fall under the paper's venue. Thus, I will say that the venue the paper is published under is indeed a good venue in the domain.
+      \end{solution}
+    \end{parts}
+
+    \question\
+    \begin{parts}
+      \part{} What problem does the paper discuss?
+      \begin{solution}
+        The paper's title ``Does Twitter predict Bitcoin?'' summarizes the paper's goal of examining the link between investor attention on social media, such as Twitter, and Bitcoin returns, trading volume, and realized volatility.
+      \end{solution}
+
+      \part{} What questions they answer in the paper?
+      \begin{solution}
+        The paper discovered that the number of tweets is a significant driver of next day trading volume and realized volatility.
+      \end{solution}
+
+      \part{} How they perform data analysis?
+      \begin{solution}
+        The used linear and nonlinear Granger causality tests to analyse the data.
+      \end{solution}
+
+      \part{} What's the novelty of this paper?
+      \begin{solution}
+        The paper argues that unlike previous studies, they employ the number of tweets from Twitter as a measure of attention rather than Google trends as they argue this is a better measure of attention from more informed investors.
+      \end{solution}
+    \end{parts}
+
+    \question{} How is this work related to your project? (e.g., should it be considered as a baseline approach?)
+    \begin{solution}
+      Our project's revised goal, from feedback on our proposal, is to examine the prices of different cryptocurrencies based on data from Twitter and seeing if different predictors can perform differently on more ``meme'' coins.
+
+      This project focuses on only one cryptocurrency, Bitcoin. I would consider that to be a baseline approach to the analysis of each of the cryptocurrencies our project will look at.
+    \end{solution}
+
+    \question{}
+    \begin{solution}
+
+    \end{solution}
+
+    \question{}
+    \begin{solution}
+
+    \end{solution}
+  \end{questions}
+
+  \newpage
+
+  \printbibliography[]
+\end{document}
