@@ -31,6 +31,7 @@ from PIL import Image
 from sklearn.preprocessing import LabelEncoder
 from torch import nn
 from torch.utils.data import DataLoader
+from torchinfo import summary
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import transforms
 
@@ -237,6 +238,8 @@ optimizer = torch.optim.SGD(
     model.parameters(), lr=LEARNING_RATE, weight_decay=0.005, momentum=0.9
 )
 
+summary(model, input_size=(BATCH_SIZE, 3, 32, 32))
+
 
 # %%
 def train_model(epoch_count, train_loader, model, criterion, optimizer):
@@ -368,6 +371,9 @@ optimizer = torch.optim.SGD(
     model_v2.parameters(), lr=LEARNING_RATE, weight_decay=0.005, momentum=0.9
 )
 
+summary(model_v2, input_size=(BATCH_SIZE, 3, 32, 32))
+
+# %%
 train_model(EPOCH_COUNT, train_loader, model_v2, criterion, optimizer)
 # %%
 evaluate_model(train_loader, test_loader, model_v2)
