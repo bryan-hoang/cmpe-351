@@ -26,10 +26,10 @@ from typing import Any, Callable, Tuple
 
 import pandas as pd
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 from sklearn.preprocessing import LabelEncoder
+from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import transforms
@@ -187,7 +187,7 @@ print(len(test_loader))
 def trial_layers(train_loader):
     """Test the shape of the layers for a CNN."""
     dataiter = iter(train_loader)
-    (images) = dataiter.next()
+    (images, _) = dataiter.next()
 
     conv1 = nn.Conv2d(3, 6, 5)
     pool = nn.MaxPool2d(2, 2)
@@ -224,7 +224,7 @@ class ConvolutionalNeuralNetwork(nn.Module):
         """Progresses data across layers."""
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.flatten(x, 1)  # flatten all dimensions except batch
+        x = torch.flatten(x, 1)  # flatten all dimensions except batch
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return x
@@ -263,9 +263,6 @@ def train_model(epoch_count, train_loader, model, criterion, optimizer):
         print(f"Epoch [{epoch + 1}/{epoch_count}], Loss: {loss.item():.4f}")
 
 
-train_model(EPOCH_COUNT, train_loader, model, criterion, optimizer)
-
-
 # %%
 def evaluate_model(train_loader, test_loader, model):
     """Evaluate a DL model."""
@@ -295,6 +292,10 @@ def evaluate_model(train_loader, test_loader, model):
         )
 
 
+# %%
+train_model(EPOCH_COUNT, train_loader, model, criterion, optimizer)
+
+# %%
 evaluate_model(train_loader, test_loader, model)
 
 # %% [markdown]
@@ -302,7 +303,7 @@ evaluate_model(train_loader, test_loader, model)
 
 # %%
 # Hyper parameters
-EPOCH_COUNT = 2
+EPOCH_COUNT = 4
 CLASSES_COUNT = 13
 BATCH_SIZE = 32
 LEARNING_RATE = 0.001
@@ -312,11 +313,12 @@ LEARNING_RATE = 0.001
 def trial_layers_v2(train_loader):
     """Test the shape of the layers for a CNN."""
     dataiter = iter(train_loader)
-    (images) = dataiter.next()
+    (images, _) = dataiter.next()
 
     conv1 = nn.Conv2d(3, 6, 5)
-    pool = nn.MaxPool2d(2, 2)
+    pool = nn.MaxPool2d(2, 2, 1)
     conv2 = nn.Conv2d(6, 16, 5)
+    conv3 = nn.Conv2d(16, 32, 5)
     print(images.shape)
     trials = conv1(images)
     print(trials.shape)
@@ -326,6 +328,13 @@ def trial_layers_v2(train_loader):
     print(trials.shape)
     trials = pool(trials)
     print(trials.shape)
+    trials = conv3(trials)
+    print(trials.shape)
+    trials = pool(trials)
+    print(trials.shape)
+
+
+trial_layers_v2(train_loader)
 
 
 # %%
@@ -336,29 +345,29 @@ class ConvolutionalNeuralNetworkV2(nn.Module):
         """Determine what layers and their order in CNN object."""
         super().__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool = nn.MaxPool2d(2, 2, 1)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 128)
-        self.fc2 = nn.Linear(128, num_classes)
+        self.conv3 = nn.Conv2d(16, 32, 5)
+        self.fc1 = nn.Linear(32 * 2 * 2, 32)
+        self.fc2 = nn.Linear(32, num_classes)
 
     def forward(self, x):
         """Progresses data across layers."""
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.flatten(x, 1)  # flatten all dimensions except batch
+        x = self.pool(F.relu(self.conv3(x)))
+        x = torch.flatten(x, 1)  # flatten all dimensions except batch
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return x
 
 
 # %%
-model = ConvolutionalNeuralNetwork(CLASSES_COUNT)
-criterion = nn.CrossEntropyLoss()
+model_v2 = ConvolutionalNeuralNetworkV2(CLASSES_COUNT)
 optimizer = torch.optim.SGD(
-    model.parameters(), lr=LEARNING_RATE, weight_decay=0.005, momentum=0.9
+    model_v2.parameters(), lr=LEARNING_RATE, weight_decay=0.005, momentum=0.9
 )
 
-train_model(EPOCH_COUNT, train_loader, model, criterion, optimizer)
+train_model(EPOCH_COUNT, train_loader, model_v2, criterion, optimizer)
 # %%
-
-evaluate_model(train_loader, test_loader, model)
+evaluate_model(train_loader, test_loader, model_v2)
