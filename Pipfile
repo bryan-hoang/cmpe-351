@@ -21,6 +21,7 @@ scipy = "*"
 seaborn = "*"
 statsmodels = "*"
 torch = "*"
+torchinfo = "*"
 torchvision = "*"
 
 [dev-packages]
