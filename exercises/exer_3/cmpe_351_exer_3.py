@@ -24,11 +24,13 @@
 
 # %%
 # Resolving paths in a platform agnostic way.
+import logging
 import multiprocessing
 import pickle
 from os.path import dirname, join, realpath
 from pathlib import Path
 from string import punctuation
+from time import time
 
 import nltk
 import pandas as pd
@@ -72,6 +74,13 @@ nltk.download("stopwords")
 nltk.download("punkt")
 nltk.download("wordnet")
 nltk.download("omw-1.4")
+
+# %%
+logging.basicConfig(
+    format="%(levelname)s - %(asctime)s: %(message)s",
+    datefmt="%H:%M:%S",
+    level=logging.INFO,
+)
 
 # %%
 stop_words = set(stopwords.words("english"))
@@ -147,12 +156,28 @@ question_titles_df.head()
 
 # %%
 cores = multiprocessing.cpu_count()
-model = Word2Vec(
-    sentences=question_titles_df,
+w2v_model = Word2Vec(
     min_count=1,
     workers=cores - 1,
 )
-model.save(join(MODELS_DIR, "word2vec.model"))
+
+# %%
+t = time()
+w2v_model.build_vocab(question_titles_df, progress_per=10000)
+print("Time to build vocab: {} mins".format(round((time() - t) / 60, 2)))
+
+# %%
+t = time()
+w2v_model.train(
+    question_titles_df,
+    total_examples=w2v_model.corpus_count,
+    epochs=1,
+    report_delay=1,
+)
+print("Time to train the model: {} mins".format(round((time() - t) / 60, 2)))
+
+# %%
+w2v_model.save(join(MODELS_DIR, "word2vec.model"))
 
 # %% [markdown]
 # ## Topic Modelling
